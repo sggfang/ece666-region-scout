@@ -173,6 +173,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
     bool CacheDirty, default="false", desc="Indicates whether a cache has responded with dirty data";
     bool Sharers, default="false", desc="Indicates whether a cache has indicated it is currently a sharer";
     bool Owned, default="false", desc="Indicates whether a cache has indicated it is currently a sharer";
+		bool regionSharers, default="false", desc="Indicates whether a cache has indicated it is currently a region sharer"; //added
   }
 
   structure(TBETable, external="yes") {
@@ -371,6 +372,12 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
       peek(responseToDir_in, ResponseMsg) {
         PfEntry pf_entry := getProbeFilterEntry(in_msg.addr);
         TBE tbe := TBEs[in_msg.addr];
+				//check if a region hit from in message - if so set region sharers(default to false)
+				if(in_msg.region_hit)
+				{
+					tbe.regionSharers := true;
+				}
+				else{tbe.regionSharers := false;}
         if (in_msg.Type == CoherenceResponseType:ACK) {
           trigger(Event:Ack, in_msg.addr, pf_entry, tbe);
         } else if (in_msg.Type == CoherenceResponseType:ACK_SHARED) {
@@ -741,6 +748,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
         assert(is_valid(tbe));
         out_msg.addr := address;
         out_msg.Type := tbe.ResponseType;
+				out_msg.region_hit := tbe.regionSharers; //added 
         out_msg.Sender := machineID;
         out_msg.Destination.add(in_msg.OriginalRequestorMachId);
         out_msg.DataBlk := in_msg.DataBlk;
@@ -946,8 +954,8 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
     }
   }
 
-  action(fb_forwardRequestBcast, "fb", desc="Forward requests to all nodes") {
-    if (machineCount(MachineType:L1Cache) > 1) {
+  action(fb_forwardRequestBcast, "fb", desc="Forward requests to all nodes") {  //need to adjust
+    if (machineCount(MachineType:L1Cache) > 1) { 
       peek(requestQueue_in, RequestMsg) {
         if (full_bit_dir_enabled) {
           fwd_set := cache_entry.Sharers;
@@ -965,7 +973,10 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
                   out_msg.SilentAcks := out_msg.SilentAcks - 1;
               }
           }
-        } else {
+        } 
+				else if(in_msg.region_unshared){ }		//bypass the forwarding if the region is unshared, only communicate with directory
+				else 
+				{
             enqueue(forwardNetwork_out, RequestMsg, from_memory_controller_latency) {
                 out_msg.addr := address;
                 out_msg.Type := in_msg.Type;
