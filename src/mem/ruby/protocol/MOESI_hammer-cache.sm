@@ -159,6 +159,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     bool AppliedSilentAcks, default="false", desc="for full-bit dir, does the pending msg count reflect the silent acks";
     MachineID LastResponder, desc="last machine to send a response for this request";
     MachineID CurOwner,      desc="current owner of the block, used for UnblockS responses";
+		bool regionShared, default="false", desc="bool value to accumulate messages from other nodes";
 
     Cycles InitialRequestTime, default="Cycles(0)",
             desc="time the initial requests was sent from the L1Cache";
@@ -370,6 +371,8 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 
         Entry cache_entry := getCacheEntry(in_msg.addr);
         TBE tbe := TBEs[in_msg.addr];
+				tbe.regionShared := tbe.regionShared || in_msg.region_hit;
+				DPRINTF(ProtocolTrace, "value of region shared: %d - at %X\n", tbe.regionShared, in_msg.addr);
 
         if (in_msg.Type == CoherenceResponseType:ACK) {
           trigger(Event:Ack, in_msg.addr, cache_entry, tbe);
@@ -566,7 +569,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   // ACTIONS
 
   action(a_issueGETS, "a", desc="Issue GETS") {
-		region_scout.increment_CRH(address); 				//increment crh
+		//region_scout.increment_CRH(address); 				//increment crh
     enqueue(requestNetwork_out, RequestMsg, issue_latency) {
       assert(is_valid(tbe));
       out_msg.addr := address;
@@ -583,7 +586,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   }
 
   action(b_issueGETX, "b", desc="Issue GETX") {
-		region_scout.increment_CRH(address); 				//increment crh
+		//region_scout.increment_CRH(address); 				//increment crh
     enqueue(requestNetwork_out, RequestMsg, issue_latency) {
       assert(is_valid(tbe));
       out_msg.addr := address;
@@ -697,7 +700,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   }
 
   action(df_issuePUTF, "df", desc="Issue PUTF") {
-		region_scout.decrement_CRH(address);			//decrement CRH
+		//region_scout.decrement_CRH(address);			//decrement CRH
     enqueue(requestNetwork_out, RequestMsg, issue_latency) {
       out_msg.addr := address;
       out_msg.Type := CoherenceRequestType:PUTF;
@@ -1101,6 +1104,11 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(o_checkForCompletion, "o", desc="Check if we have received all the messages required for completion") {
     assert(is_valid(tbe));
     if (tbe.NumPendingMsgs == 0) {
+			if(!(tbe.regionShared)) {
+				region_scout.append_NSRT(address);
+				DPRINTF(ProtocolTrace, "appending NSRT: %X\n", address);
+
+			}			//append nsrt if there is no region hit
       enqueue(triggerQueue_out, TriggerMsg) {
         out_msg.addr := address;
         if (tbe.Sharers) {
@@ -1248,7 +1256,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(u_writeDataToCache, "u", desc="Write data to cache") {
     peek(responseToCache_in, ResponseMsg) {
       assert(is_valid(cache_entry));
-			if(!(in_msg.region_hit)) {region_scout.append_NSRT(in_msg.addr);}			//append nsrt if there is no region hit
+			//if(!(in_msg.region_hit)) {region_scout.append_NSRT(in_msg.addr);}			//append nsrt if there is no region hit
       cache_entry.DataBlk := in_msg.DataBlk;
       cache_entry.Dirty := in_msg.Dirty;
     }
@@ -1268,7 +1276,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
       DPRINTF(RubySlicc, "Cached Data Block: %s, Msg Data Block: %s\n",
               cache_entry.DataBlk, in_msg.DataBlk);
       assert(cache_entry.DataBlk == in_msg.DataBlk);
-			if(!(in_msg.region_hit)) {region_scout.append_NSRT(in_msg.addr);}			//append nsrt if there is no region hit
+			//if(!(in_msg.region_hit)) {region_scout.append_NSRT(in_msg.addr);}			//append nsrt if there is no region hit
       cache_entry.DataBlk := in_msg.DataBlk;
       cache_entry.Dirty := in_msg.Dirty || cache_entry.Dirty;
     }
@@ -1286,9 +1294,9 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   }
 
   action(gg_deallocateL1CacheBlock, "\g", desc="Deallocate cache block.  Sets the cache to invalid, allowing a replacement in parallel with a fetch.") {
-    if (L1Dcache.isTagPresent(address)) {
+    region_scout.decrement_CRH(address);		//decrement on deallocation
+		if (L1Dcache.isTagPresent(address)) {
       L1Dcache.deallocate(address);
-			//decrement crh?
     } else {
       L1Icache.deallocate(address);
     }
@@ -1298,21 +1306,24 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(ii_allocateL1DCacheBlock, "\i", desc="Set L1 D-cache tag equal to tag of block B.") {
     if (is_invalid(cache_entry)) {
       set_cache_entry(L1Dcache.allocate(address, new Entry));
+			region_scout.increment_CRH(address);
     }
   }
 
   action(jj_allocateL1ICacheBlock, "\j", desc="Set L1 I-cache tag equal to tag of block B.") {
     if (is_invalid(cache_entry)) {
       set_cache_entry(L1Icache.allocate(address, new Entry));
+			region_scout.increment_CRH(address);
     }
   }
 
   action(vv_allocateL2CacheBlock, "\v", desc="Set L2 cache tag equal to tag of block B.") {
     set_cache_entry(L2cache.allocate(address, new Entry));
+		region_scout.increment_CRH(address);
   }
 
   action(rr_deallocateL2CacheBlock, "\r", desc="Deallocate L2 cache block.  Sets the cache to not present, allowing a replacement in parallel with a fetch.") {
-		region_scout.decrement_CRH(address);		//decrement on deallocation
+		if(L2cache.isTagPresent(address)){region_scout.decrement_CRH(address);}		//decrement on deallocation
     L2cache.deallocate(address);
     unset_cache_entry();
   }

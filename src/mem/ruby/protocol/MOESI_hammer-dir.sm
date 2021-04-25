@@ -377,7 +377,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
 				{
 					tbe.regionSharers := true;
 				}
-				else{tbe.regionSharers := false;}
+				//else{tbe.regionSharers := (tbe.regionSharers || false);}
         if (in_msg.Type == CoherenceResponseType:ACK) {
           trigger(Event:Ack, in_msg.addr, pf_entry, tbe);
         } else if (in_msg.Type == CoherenceResponseType:ACK_SHARED) {
@@ -748,7 +748,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
         assert(is_valid(tbe));
         out_msg.addr := address;
         out_msg.Type := tbe.ResponseType;
-				out_msg.region_hit := tbe.regionSharers; //added 
+				out_msg.region_hit := false; //added  -- memory queue
         out_msg.Sender := machineID;
         out_msg.Destination.add(in_msg.OriginalRequestorMachId);
         out_msg.DataBlk := in_msg.DataBlk;
@@ -844,11 +844,13 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
   action(r_setSharerBit, "r", desc="We saw other sharers") {
     assert(is_valid(tbe));
     tbe.Sharers := true;
+		tbe.regionSharers := true;
   }
 
   action(so_setOwnerBit, "so", desc="We saw other sharers") {
     assert(is_valid(tbe));
     tbe.Sharers := true;
+		tbe.regionSharers := true;
     tbe.Owned := true;
   }
 
@@ -974,7 +976,23 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
               }
           }
         } 
-				else if(in_msg.region_unshared){ }		//bypass the forwarding if the region is unshared, only communicate with directory
+				else if(in_msg.region_unshared){
+					
+						DPRINTF(ProtocolTrace, "bypassed broadcast, %X - %d\n", address, in_msg.Requestor); 
+						//treat as if it is one machine
+						enqueue(responseNetwork_out, ResponseMsg, 1) {
+            out_msg.addr := address;
+            out_msg.Type := CoherenceResponseType:ACK;
+            out_msg.Sender := machineID;
+            out_msg.Destination.add(in_msg.Requestor);
+            out_msg.Dirty := false; // By definition, the block is now clean
+            out_msg.Acks := 0;
+            out_msg.SilentAcks := machineCount(MachineType:L1Cache) - 1; 	//need to have everyone send nothing
+            DPRINTF(RubySlicc, "%d\n", out_msg.Acks);
+            out_msg.MessageSize := MessageSizeType:Response_Control;
+					}
+
+				}		//bypass the forwarding if the region is unshared, only communicate with directory
 				else 
 				{
             enqueue(forwardNetwork_out, RequestMsg, from_memory_controller_latency) {

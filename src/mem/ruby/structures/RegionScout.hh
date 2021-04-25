@@ -5,6 +5,9 @@
 #include <unordered_map>
 #include <vector>
 #include "mem/ruby/common/Address.hh"
+#define REGION_SIZE	(8)
+#define CRH_SIZE (1024)
+#define CRH_MASK (CRH_SIZE - 1)
 
 //ADDR is uint64_t
 
@@ -23,7 +26,7 @@ class RegionScout
 		void removeMRU_NSRT();											//NSRT is full, remove MRU
 
 		uint32_t CRH_size = 256;
-		uint32_t crh_vector[256]; 					//vector to contain (count);
+		uint32_t crh_vector[CRH_SIZE]; 					//vector to contain (count);
 		void increment_CRH(Addr addr);								//increment on a block access
 		void decrement_CRH(Addr addr);								//decrement on a replacement of a block
 		bool check_CRH(Addr addr);
@@ -33,7 +36,7 @@ class RegionScout
 
 inline bool RegionScout::verify_region(Addr address)
 {
-	uint64_t region =  address >> 14;
+	uint64_t region =  address >> REGION_SIZE;
 	if(nsrt_map.find(region) == nsrt_map.end()) //not found in
 	{ return false; }
 	else
@@ -57,7 +60,7 @@ inline void RegionScout::append_NSRT(Addr address)
 	{
 		removeMRU_NSRT();
 	}
-	uint64_t region = address >> 14;
+	uint64_t region = address >> REGION_SIZE;
 	nsrt_map.insert({region, 1});
 	MRU = region;
 }
@@ -69,26 +72,30 @@ inline void RegionScout::removeMRU_NSRT()
 
 inline void RegionScout::invalidate_NSRT(Addr address)
 {
-	uint64_t region = address >> 14;
+	uint64_t region = address >> REGION_SIZE;
 	nsrt_map.erase(region);
 
 }
 
 inline void RegionScout::increment_CRH(Addr address)
 {
-	int index = (address >> 14) && 0xFF;
+	int index = (address >> REGION_SIZE) && CRH_MASK;
 	crh_vector[index] += 1;
+	DPRINTF(RubySlicc, "crh_vector after incr: %d\n", crh_vector[index]);
 }
 
 inline void RegionScout::decrement_CRH(Addr address)
 {
-	int index = (address >> 14) && 0xFF;
+	int index = (address >> REGION_SIZE) && CRH_MASK;
+	//if(!(crh_vector[index] <= 0)) {crh_vector[index] -= 1;}
 	crh_vector[index] -= 1;
+	DPRINTF(RubySlicc, "crh_vector after dec: %d\n", crh_vector[index]);
 }
 
 inline bool RegionScout::check_CRH(Addr address)
 {
-	int index = (address >> 14) && 0xFF;
+	int index = (address >> REGION_SIZE) && CRH_MASK;
+	DPRINTF(RubySlicc, "value of CRH: %d, @ %X\n", crh_vector[index], address);
 	if(crh_vector[index] > 0) {return true;}
 	else {return false;}
 

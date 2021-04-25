@@ -47,12 +47,14 @@ inline void RegionScout::increment_CRH(Addr address)
 {
 	int index = (address >> 14) && 0xFF;
 	crh_vector[index] += 1;
+	DPRINTF(RubySlicc, "crh_vector after incr: %d\n", crh_vector[index]);
 }
 
 inline void RegionScout::decrement_CRH(Addr address)
 {
 	int index = (address >> 14) && 0xFF;
 	crh_vector[index] -= 1;
+	DPRINTF(RubySlicc, "crh_vector after dec: %d\n", crh_vector[index]);
 }
 
 inline bool RegionScout::check_CRH(Addr address)
