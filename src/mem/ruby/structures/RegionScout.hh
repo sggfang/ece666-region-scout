@@ -81,7 +81,7 @@ inline void RegionScout::increment_CRH(Addr address)
 {
 	int index = (address >> REGION_SIZE) && CRH_MASK;
 	crh_vector[index] += 1;
-	DPRINTF(RubySlicc, "crh_vector after incr: %d\n", crh_vector[index]);
+	DPRINTF(RubySlicc, "crh_vector[%d] after incr: %d @ address %X\n",index, crh_vector[index], address);
 }
 
 inline void RegionScout::decrement_CRH(Addr address)
@@ -89,13 +89,13 @@ inline void RegionScout::decrement_CRH(Addr address)
 	int index = (address >> REGION_SIZE) && CRH_MASK;
 	//if(!(crh_vector[index] <= 0)) {crh_vector[index] -= 1;}
 	crh_vector[index] -= 1;
-	DPRINTF(RubySlicc, "crh_vector after dec: %d\n", crh_vector[index]);
+	DPRINTF(RubySlicc, "crh_vector[%d] after dec: %d\n @ address %X",index, crh_vector[index], address);
 }
 
 inline bool RegionScout::check_CRH(Addr address)
 {
 	int index = (address >> REGION_SIZE) && CRH_MASK;
-	DPRINTF(RubySlicc, "value of CRH: %d, @ %X\n", crh_vector[index], address);
+	DPRINTF(RubySlicc, "value of CRH[%d]: %d, @ %X\n", index, crh_vector[index], address);
 	if(crh_vector[index] > 0) {return true;}
 	else {return false;}
 
