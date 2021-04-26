@@ -178,14 +178,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 
 	//added structures -- may need to make RegionScout.hh two seperate files
 	structure(RegionScout, external ="yes") {
-		bool verify_region(Addr);							//verify if region is shared or not shared
+		bool verify_region(Addr, MachineID);							//verify if region is shared or not shared
 		bool isNSRTFull();										//check to see if NSRT is full
-		void append_NSRT(Addr);								//region is unshared
-		void invalidate_NSRT(Addr);						//region becomes shared				
+		void append_NSRT(Addr, MachineID);								//region is unshared
+		void invalidate_NSRT(Addr, MachineID);						//region becomes shared				
 		void removeMRU_NSRT();								//NSRT is full, remove MRU
-		void increment_CRH(Addr);							//increment on a block access
-		void decrement_CRH(Addr);							//decrement on a replacement of a block
-		bool check_CRH(Addr);
+		void increment_CRH(Addr, MachineID);							//increment on a block access
+		void decrement_CRH(Addr, MachineID);							//decrement on a replacement of a block
+		bool check_CRH(Addr, MachineID);
 	}
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -573,7 +573,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     enqueue(requestNetwork_out, RequestMsg, issue_latency) {
       assert(is_valid(tbe));
       out_msg.addr := address;
-			out_msg.region_unshared := region_scout.verify_region(address);				//check to see if region is unshared -- send message to directory
+			out_msg.region_unshared := region_scout.verify_region(address, machineID);				//check to see if region is unshared -- send message to directory
       out_msg.Type := CoherenceRequestType:GETS;
       out_msg.Requestor := machineID;
       out_msg.Destination.add(mapAddressToMachine(address, MachineType:Directory));
@@ -590,7 +590,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     enqueue(requestNetwork_out, RequestMsg, issue_latency) {
       assert(is_valid(tbe));
       out_msg.addr := address;
-			out_msg.region_unshared := region_scout.verify_region(address);				//check to see if region is unshared -- send message to directory
+			out_msg.region_unshared := region_scout.verify_region(address, machineID);				//check to see if region is unshared -- send message to directory
       out_msg.Type := CoherenceRequestType:GETX;
       out_msg.Requestor := machineID;
       out_msg.Destination.add(mapAddressToMachine(address, MachineType:Directory));
@@ -639,14 +639,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
         assert(is_valid(cache_entry));
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_EXCLUSIVE;
         out_msg.Sender := machineID;
@@ -714,14 +714,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
         assert(is_valid(cache_entry));
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA;
         out_msg.Sender := machineID;
@@ -745,14 +745,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
         assert(is_valid(cache_entry));
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_SHARED;
         out_msg.Sender := machineID;
@@ -801,14 +801,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
         assert(is_valid(cache_entry));
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_SHARED;
         out_msg.Sender := machineID;
@@ -848,14 +848,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(f_sendAck, "f", desc="Send ack from cache to requestor") {
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:ACK;
         out_msg.Sender := machineID;
@@ -873,14 +873,14 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(ff_sendAckShared, "\f", desc="Send shared ack from cache to requestor") {
     peek(forwardToCache_in, RequestMsg) {
       enqueue(responseNetwork_out, ResponseMsg, cache_response_latency) {
-				if(region_scout.check_CRH(address)) {
+				if(region_scout.check_CRH(address, machineID)) {
 					out_msg.region_hit := true;
-					if(region_scout.verify_region(address))
-					{
-						region_scout.invalidate_NSRT(address);
-					}
 				}			//check CRH
 				else{out_msg.region_hit := false;}
+				if(region_scout.verify_region(address, machineID))
+				{
+						region_scout.invalidate_NSRT(address, machineID);
+				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:ACK_SHARED;
         out_msg.Sender := machineID;
@@ -1105,10 +1105,11 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
     assert(is_valid(tbe));
     if (tbe.NumPendingMsgs == 0) {
 			if(!(tbe.regionShared)) {
-				region_scout.append_NSRT(address);
+				region_scout.append_NSRT(address, machineID);
 				DPRINTF(ProtocolTrace, "appending NSRT: %X\n", address);
 
 			}			//append nsrt if there is no region hit
+			tbe.regionShared := false; //reset tbe
       enqueue(triggerQueue_out, TriggerMsg) {
         out_msg.addr := address;
         if (tbe.Sharers) {
@@ -1294,7 +1295,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   }
 
   action(gg_deallocateL1CacheBlock, "\g", desc="Deallocate cache block.  Sets the cache to invalid, allowing a replacement in parallel with a fetch.") {
-    region_scout.decrement_CRH(address);		//decrement on deallocation
+    region_scout.decrement_CRH(address, machineID);		//decrement on deallocation
 		if (L1Dcache.isTagPresent(address)) {
       L1Dcache.deallocate(address);
     } else {
@@ -1306,30 +1307,30 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
   action(ii_allocateL1DCacheBlock, "\i", desc="Set L1 D-cache tag equal to tag of block B.") {
     if (is_invalid(cache_entry)) {
       set_cache_entry(L1Dcache.allocate(address, new Entry));
-			region_scout.increment_CRH(address);
+			region_scout.increment_CRH(address, machineID);
     }
   }
 
   action(jj_allocateL1ICacheBlock, "\j", desc="Set L1 I-cache tag equal to tag of block B.") {
     if (is_invalid(cache_entry)) {
       set_cache_entry(L1Icache.allocate(address, new Entry));
-			region_scout.increment_CRH(address);
+			region_scout.increment_CRH(address, machineID);
     }
   }
 
   action(vv_allocateL2CacheBlock, "\v", desc="Set L2 cache tag equal to tag of block B.") {
     set_cache_entry(L2cache.allocate(address, new Entry));
-		region_scout.increment_CRH(address);
+		region_scout.increment_CRH(address, machineID);
   }
 
   action(rr_deallocateL2CacheBlock, "\r", desc="Deallocate L2 cache block.  Sets the cache to not present, allowing a replacement in parallel with a fetch.") {
-		if(L2cache.isTagPresent(address)){region_scout.decrement_CRH(address);}		//decrement on deallocation
+		if(L2cache.isTagPresent(address)){region_scout.decrement_CRH(address, machineID);}		//decrement on deallocation
     L2cache.deallocate(address);
     unset_cache_entry();
   }
 
   action(gr_deallocateCacheBlock, "\gr", desc="Deallocate an L1 or L2 cache block.") {
-		region_scout.decrement_CRH(address);		//decrement on deallocation
+		region_scout.decrement_CRH(address, machineID);		//decrement on deallocation
     if (L1Dcache.isTagPresent(address)) {
       L1Dcache.deallocate(address);
     }
