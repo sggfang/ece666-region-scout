@@ -181,8 +181,8 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 		bool verify_region(Addr, MachineID);							//verify if region is shared or not shared
 		bool isNSRTFull();										//check to see if NSRT is full
 		void append_NSRT(Addr, MachineID);								//region is unshared
-		void invalidate_NSRT(Addr, MachineID);						//region becomes shared				
-		void removeMRU_NSRT();								//NSRT is full, remove MRU
+		void invalidate_NSRT(Addr, MachineID, MachineID);						//region becomes shared				
+		void removeMRU_NSRT(Addr, MachineID);								//NSRT is full, remove MRU
 		void increment_CRH(Addr, MachineID);							//increment on a block access
 		void decrement_CRH(Addr, MachineID);							//decrement on a replacement of a block
 		bool check_CRH(Addr, MachineID);
@@ -645,7 +645,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_EXCLUSIVE;
@@ -720,7 +720,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA;
@@ -751,7 +751,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_SHARED;
@@ -807,7 +807,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:DATA_SHARED;
@@ -854,7 +854,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:ACK;
@@ -879,7 +879,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
 				else{out_msg.region_hit := false;}
 				if(region_scout.verify_region(address, machineID))
 				{
-						region_scout.invalidate_NSRT(address, machineID);
+						region_scout.invalidate_NSRT(address, machineID, in_msg.Requestor);
 				}
         out_msg.addr := address;
         out_msg.Type := CoherenceResponseType:ACK_SHARED;
