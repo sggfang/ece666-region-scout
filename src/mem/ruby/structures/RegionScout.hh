@@ -6,7 +6,7 @@
 #include <vector>
 #include "mem/ruby/common/Address.hh"
 #include "mem/ruby/common/MachineID.hh"
-#define REGION_SIZE	(8)
+#define REGION_SIZE	(14)
 #define CRH_SIZE (256)
 #define CRH_MASK (CRH_SIZE - 1)
 
@@ -16,7 +16,7 @@
 class RegionScout
 {
 	public:
-		uint32_t NSRT_size = 1024*1024;
+		uint32_t NSRT_size = 64;
 		uint32_t MRU;
 		std::unordered_map<uint64_t, bool> nsrt_map; //unordered map to contain (region, valid);
 
