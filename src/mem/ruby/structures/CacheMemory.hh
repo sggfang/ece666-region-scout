@@ -59,6 +59,7 @@
 #include "mem/ruby/system/CacheRecorder.hh"
 #include "params/RubyCache.hh"
 #include "sim/sim_object.hh"
+//#include "mem/ruby/profiler/Profiler.h"
 
 class CacheMemory : public SimObject
 {
@@ -231,6 +232,7 @@ class CacheMemory : public SimObject
           Stats::Scalar m_prefetch_hits;
           Stats::Scalar m_prefetch_misses;
           Stats::Formula m_prefetch_accesses;
+					Stats::Scalar m_forward_bypasses;
 
           Stats::Vector m_accessModeType;
       } cacheMemoryStats;
@@ -242,6 +244,8 @@ class CacheMemory : public SimObject
       void profileDemandMiss();
       void profilePrefetchHit();
       void profilePrefetchMiss();
+			void increment_bypass();
+			
 };
 
 std::ostream& operator<<(std::ostream& out, const CacheMemory& obj);

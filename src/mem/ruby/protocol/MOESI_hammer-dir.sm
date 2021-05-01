@@ -912,6 +912,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
 						{
 							DPRINTF(ProtocolTrace, "bypassed broadcast, %X - %d\n", address, in_msg.Requestor); 
 							//treat as if it is one machine
+							//increment_bypass();
 							enqueue(responseNetwork_out, ResponseMsg, 1) 
 							{
 				        out_msg.addr := address;
@@ -1012,6 +1013,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
 					
 						DPRINTF(ProtocolTrace, "bypassed broadcast, %X - %d\n", address, in_msg.Requestor); 
 						//treat as if it is one machine
+						//increment_bypass(responseNetwork_out);
 						enqueue(responseNetwork_out, ResponseMsg, 1) { //need to double check at some point!!
             out_msg.addr := address;
             out_msg.Type := CoherenceResponseType:ACK;
@@ -1108,6 +1110,7 @@ machine(MachineType:Directory, "AMD Hammer-like protocol")
 				{
 						DPRINTF(ProtocolTrace, "bypassed broadcast, %X - %d\n", address, in_msg.Requestor); 
 						//treat as if it is one machine
+						//increment_bypass(responseNetwork_out);
 						enqueue(responseNetwork_out, ResponseMsg, 1) 
 						{
 		          out_msg.addr := address;

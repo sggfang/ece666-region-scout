@@ -6,6 +6,7 @@
 #include <vector>
 #include "mem/ruby/common/Address.hh"
 #include "mem/ruby/common/MachineID.hh"
+#include "sim/sim_object.hh"
 #define REGION_SIZE	(14)
 #define CRH_SIZE (256)
 #define CRH_MASK (CRH_SIZE - 1)
@@ -34,7 +35,6 @@ class RegionScout
 		void increment_CRH(Addr addr, MachineID machineID);								//increment on a block access
 		void decrement_CRH(Addr addr, MachineID machineID);								//decrement on a replacement of a block
 		bool check_CRH(Addr addr, MachineID machineID);
-
 
 };
 
@@ -141,7 +141,7 @@ inline bool RegionScout::check_CRH(Addr address, MachineID machineID)
 	{
 		DPRINTF(RubySlicc, "one or more indicies are eqaul to 0\n");
 		return false;
-}
+	}
 
 }
 ///////////////////////////// CRH //////////////////////////////

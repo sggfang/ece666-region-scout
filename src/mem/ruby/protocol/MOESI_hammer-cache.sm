@@ -574,6 +574,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
       assert(is_valid(tbe));
       out_msg.addr := address;
 			out_msg.region_unshared := region_scout.verify_region(address, machineID);				//check to see if region is unshared -- send message to directory
+			if(out_msg.region_unshared){L1Dcache.increment_bypass();}
       out_msg.Type := CoherenceRequestType:GETS;
       out_msg.Requestor := machineID;
       out_msg.Destination.add(mapAddressToMachine(address, MachineType:Directory));
@@ -591,6 +592,7 @@ machine(MachineType:L1Cache, "AMD Hammer-like protocol")
       assert(is_valid(tbe));
       out_msg.addr := address;
 			out_msg.region_unshared := region_scout.verify_region(address, machineID);				//check to see if region is unshared -- send message to directory
+			if(out_msg.region_unshared){L1Dcache.increment_bypass();}
       out_msg.Type := CoherenceRequestType:GETX;
       out_msg.Requestor := machineID;
       out_msg.Destination.add(mapAddressToMachine(address, MachineType:Directory));

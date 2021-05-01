@@ -116,6 +116,8 @@ class MessageBuffer : public SimObject
 
     void enqueue(MsgPtr message, Tick curTime, Tick delta);
 
+		//void increment_bypass(MsgPtr message);
+
     // Defer enqueueing a message to a later cycle by putting it aside and not
     // enqueueing it in this cycle
     // The corresponding controller will need to explicitly enqueue the
@@ -262,6 +264,8 @@ class MessageBuffer : public SimObject
     Stats::Average m_stall_time;
     Stats::Scalar m_stall_count;
     Stats::Formula m_occupancy;
+		Stats::Scalar m_total_msgs;
+		
 };
 
 Tick random_time();

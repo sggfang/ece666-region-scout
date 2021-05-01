@@ -64,7 +64,8 @@ MessageBuffer::MessageBuffer(const Params &p)
     ADD_STAT(m_stall_time, "Average number of cycles messages are stalled in "
                            "this MB"),
     ADD_STAT(m_stall_count, "Number of times messages were stalled"),
-    ADD_STAT(m_occupancy, "Average occupancy of buffer capacity")
+    ADD_STAT(m_occupancy, "Average occupancy of buffer capacity"),
+		ADD_STAT(m_total_msgs, "total number of messages")
 {
     m_msg_counter = 0;
     m_consumer = NULL;
@@ -80,6 +81,7 @@ MessageBuffer::MessageBuffer(const Params &p)
 
     m_buf_msgs = 0;
     m_stall_time = 0;
+		m_total_msgs = 0;
 
     m_dequeue_callback = nullptr;
 
@@ -197,6 +199,7 @@ MessageBuffer::enqueue(MsgPtr message, Tick current_time, Tick delta)
     }
 
     m_msg_counter++;
+		m_total_msgs++;
     m_msgs_this_cycle++;
 
     // Calculate the arrival time of the message, that is, the first
@@ -442,6 +445,14 @@ MessageBuffer::deferEnqueueingMessage(Addr addr, MsgPtr message)
             *(message.get()), addr);
     (m_deferred_msg_map[addr]).push_back(message);
 }
+
+/*void
+MessageBuffer::increment_bypass(MsgPtr message)
+{
+
+	m_forward_bypass++;
+
+}*/
 
 void
 MessageBuffer::enqueueDeferredMessages(Addr addr, Tick curTime, Tick delay)

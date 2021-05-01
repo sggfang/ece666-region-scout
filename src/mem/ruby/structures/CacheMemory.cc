@@ -77,6 +77,7 @@ CacheMemory::CacheMemory(const Params &p)
     m_block_size = p.block_size;  // may be 0 at this point. Updated in init()
     m_use_occupancy = dynamic_cast<ReplacementPolicy::WeightedLRU*>(
                                     m_replacementPolicy_ptr) ? true : false;
+
 }
 
 void
@@ -313,6 +314,13 @@ CacheMemory::deallocate(Addr address)
     m_tag_index.erase(address);
 }
 
+void
+CacheMemory::increment_bypass()
+{
+	cacheMemoryStats.m_forward_bypasses++;
+
+}
+
 // Returns with the physical address of the conflicting cache line
 Addr
 CacheMemory::cacheProbe(Addr address) const
@@ -537,7 +545,8 @@ CacheMemoryStats::CacheMemoryStats(Stats::Group *parent)
       ADD_STAT(m_prefetch_misses, "Number of cache prefetch misses"),
       ADD_STAT(m_prefetch_accesses, "Number of cache prefetch accesses",
                m_prefetch_hits + m_prefetch_misses),
-      ADD_STAT(m_accessModeType, "")
+      ADD_STAT(m_accessModeType, ""),
+			ADD_STAT(m_forward_bypasses, "total number of bypasses")
 {
     numDataArrayReads
         .flags(Stats::nozero);
