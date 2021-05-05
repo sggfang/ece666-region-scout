@@ -217,6 +217,7 @@ structure (CacheMemory, external = "yes") {
   void profileDemandMiss();
   void profilePrefetchHit();
   void profilePrefetchMiss();
+  void increment_bypass();
 }
 
 structure (WireBuffer, inport="yes", outport="yes", external = "yes") {
